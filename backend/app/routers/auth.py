@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi.security import OAuth2PasswordRequestForm
 
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
@@ -8,11 +9,8 @@ from app.models.user import User
 from app.schemas.user import (
     UserCreate,
     UserResponse,
-    UserLogin,
     Token
 )
-
-from fastapi.security import OAuth2PasswordRequestForm
 
 from app.auth.auth import (
     hash_password,
@@ -28,9 +26,14 @@ router = APIRouter(
 
 
 @router.post("/register", response_model=UserResponse)
-def register(user: UserCreate, db: Session = Depends(get_db)):
+def register(
+    user: UserCreate,
+    db: Session = Depends(get_db)
+):
 
-    existing_user = db.query(User).filter(User.email == user.email).first()
+    existing_user = db.query(User).filter(
+        User.email == user.email
+    ).first()
 
     if existing_user:
         raise HTTPException(
@@ -49,6 +52,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
 
     return new_user
+
 
 @router.post("/login", response_model=Token)
 def login(
@@ -76,7 +80,9 @@ def login(
         )
 
     access_token = create_access_token(
-        data={"sub": db_user.email}
+        data={
+            "sub": db_user.email
+        }
     )
 
     return {
@@ -84,10 +90,14 @@ def login(
         "token_type": "bearer"
     }
 
+
 @router.get("/profile")
-def profile(email: str = Depends(verify_token)):
+def profile(
+    current_user: User = Depends(verify_token)
+):
 
     return {
-        "message": "Welcome",
-        "email": email
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email
     }
