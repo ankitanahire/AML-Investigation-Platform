@@ -8,6 +8,16 @@ class AccountCreate(BaseModel):
     account_type: str
 
 
+class DepositRequest(BaseModel):
+    account_number: str
+    amount: Decimal
+
+
+class WithdrawRequest(BaseModel):
+    account_number: str
+    amount: Decimal
+
+
 class AccountResponse(BaseModel):
     id: int
     account_number: str
