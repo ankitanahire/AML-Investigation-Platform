@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import List
 
 from pydantic import BaseModel
 
@@ -15,3 +16,7 @@ class AccountResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AccountList(BaseModel):
+    accounts: List[AccountResponse]

@@ -6,10 +6,13 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.accounts import Account
 from app.models.user import User
+
 from app.schemas.accounts import (
     AccountCreate,
-    AccountResponse
+    AccountResponse,
+    AccountList,
 )
+
 from app.auth.auth import verify_token
 
 router = APIRouter(
@@ -48,3 +51,18 @@ def create_account(
     db.refresh(new_account)
 
     return new_account
+
+
+@router.get("/", response_model=AccountList)
+def view_my_accounts(
+    current_user: User = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+
+    accounts = db.query(Account).filter(
+        Account.user_id == current_user.id
+    ).all()
+
+    return {
+        "accounts": accounts
+    }
