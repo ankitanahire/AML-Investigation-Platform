@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -36,11 +36,17 @@ def transfer_money(
 
 @router.get("/", response_model=list[TransactionResponse])
 def transaction_history(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    transaction_type: str | None = None,
     current_user: User = Depends(verify_token),
     db: Session = Depends(get_db)
 ):
 
     return TransactionService.transaction_history(
         db,
-        current_user.id
+        current_user.id,
+        page,
+        limit,
+        transaction_type
     )

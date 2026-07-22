@@ -1,10 +1,15 @@
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.accounts import Account
 from app.models.transaction import Transaction
 
 from app.schemas.transaction import TransferRequest
+
+from app.exceptions.transaction_exceptions import (
+    SenderAccountNotFoundException,
+    ReceiverAccountNotFoundException,
+    InsufficientBalanceException,
+)
 
 
 class TransactionService:
@@ -22,32 +27,17 @@ class TransactionService:
         ).first()
 
         if sender is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Sender account not found"
-            )
+            raise SenderAccountNotFoundException()
 
         receiver = db.query(Account).filter(
             Account.account_number == transfer.receiver_account_number
         ).first()
 
         if receiver is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Receiver account not found"
-            )
-
-        if transfer.amount <= 0:
-            raise HTTPException(
-                status_code=400,
-                detail="Amount must be greater than zero"
-            )
+            raise ReceiverAccountNotFoundException()
 
         if sender.balance < transfer.amount:
-            raise HTTPException(
-                status_code=400,
-                detail="Insufficient balance"
-            )
+            raise InsufficientBalanceException()
 
         sender.balance -= transfer.amount
         receiver.balance += transfer.amount
@@ -73,7 +63,10 @@ class TransactionService:
     @staticmethod
     def transaction_history(
         db: Session,
-        user_id: int
+        user_id: int,
+        page: int = 1,
+        limit: int = 10,
+        transaction_type: str | None = None
     ):
 
         accounts = db.query(Account).filter(
@@ -82,9 +75,22 @@ class TransactionService:
 
         account_ids = [account.id for account in accounts]
 
-        transactions = db.query(Transaction).filter(
+        query = db.query(Transaction).filter(
             (Transaction.sender_account.in_(account_ids)) |
             (Transaction.receiver_account.in_(account_ids))
-        ).order_by(Transaction.created_at.desc()).all()
+        )
+
+        if transaction_type:
+            query = query.filter(
+                Transaction.transaction_type == transaction_type
+            )
+
+        transactions = (
+            query
+            .order_by(Transaction.created_at.desc())
+            .offset((page - 1) * limit)
+            .limit(limit)
+            .all()
+        )
 
         return transactions

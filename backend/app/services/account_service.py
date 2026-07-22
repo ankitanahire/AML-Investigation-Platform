@@ -1,6 +1,5 @@
 import random
 
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.accounts import Account
@@ -10,6 +9,11 @@ from app.schemas.accounts import (
     AccountCreate,
     DepositRequest,
     WithdrawRequest,
+)
+
+from app.exceptions.account_exceptions import (
+    AccountNotFoundException,
+    InsufficientBalanceException,
 )
 
 
@@ -66,16 +70,7 @@ class AccountService:
         ).first()
 
         if account is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Account not found"
-            )
-
-        if deposit.amount <= 0:
-            raise HTTPException(
-                status_code=400,
-                detail="Deposit amount must be greater than zero"
-            )
+            raise AccountNotFoundException()
 
         account.balance += deposit.amount
 
@@ -104,22 +99,10 @@ class AccountService:
         ).first()
 
         if account is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Account not found"
-            )
-
-        if withdraw.amount <= 0:
-            raise HTTPException(
-                status_code=400,
-                detail="Withdrawal amount must be greater than zero"
-            )
+            raise AccountNotFoundException()
 
         if account.balance < withdraw.amount:
-            raise HTTPException(
-                status_code=400,
-                detail="Insufficient balance"
-            )
+            raise InsufficientBalanceException()
 
         account.balance -= withdraw.amount
 
@@ -148,10 +131,7 @@ class AccountService:
         ).first()
 
         if account is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Account not found"
-            )
+            raise AccountNotFoundException()
 
         return {
             "account_number": account.account_number,

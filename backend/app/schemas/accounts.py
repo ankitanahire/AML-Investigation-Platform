@@ -1,21 +1,17 @@
 from decimal import Decimal
-from typing import List
+from datetime import datetime
+from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class AccountType(str, Enum):
+    Savings = "Savings"
+    Current = "Current"
 
 
 class AccountCreate(BaseModel):
-    account_type: str
-
-
-class DepositRequest(BaseModel):
-    account_number: str
-    amount: Decimal
-
-
-class WithdrawRequest(BaseModel):
-    account_number: str
-    amount: Decimal
+    account_type: AccountType
 
 
 class AccountResponse(BaseModel):
@@ -23,10 +19,20 @@ class AccountResponse(BaseModel):
     account_number: str
     account_type: str
     balance: Decimal
+    created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AccountList(BaseModel):
-    accounts: List[AccountResponse]
+    accounts: list[AccountResponse]
+
+
+class DepositRequest(BaseModel):
+    account_number: str
+    amount: Decimal = Field(gt=0)
+
+
+class WithdrawRequest(BaseModel):
+    account_number: str
+    amount: Decimal = Field(gt=0)
