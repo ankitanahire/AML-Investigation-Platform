@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 
 from app.models.accounts import Account
-from app.models.transaction import Transaction
 
 from app.schemas.transaction import TransferRequest
 
@@ -10,6 +9,8 @@ from app.exceptions.transaction_exceptions import (
     ReceiverAccountNotFoundException,
     InsufficientBalanceException,
 )
+
+from app.repositories.transaction_repository import TransactionRepository
 
 
 class TransactionService:
@@ -21,17 +22,19 @@ class TransactionService:
         transfer: TransferRequest
     ):
 
-        sender = db.query(Account).filter(
-            Account.account_number == transfer.sender_account_number,
-            Account.user_id == user_id
-        ).first()
+        sender = TransactionRepository.get_sender_account(
+            db,
+            transfer.sender_account_number,
+            user_id
+        )
 
         if sender is None:
             raise SenderAccountNotFoundException()
 
-        receiver = db.query(Account).filter(
-            Account.account_number == transfer.receiver_account_number
-        ).first()
+        receiver = TransactionRepository.get_account_by_number(
+            db,
+            transfer.receiver_account_number
+        )
 
         if receiver is None:
             raise ReceiverAccountNotFoundException()
@@ -42,22 +45,22 @@ class TransactionService:
         sender.balance -= transfer.amount
         receiver.balance += transfer.amount
 
-        new_transaction = Transaction(
-            sender_account=sender.id,
-            receiver_account=receiver.id,
-            amount=transfer.amount,
-            transaction_type="Transfer"
+        transaction = TransactionRepository.create(
+            db,
+            __import__(
+                "app.models.transaction",
+                fromlist=["Transaction"]
+            ).Transaction(
+                sender_account=sender.id,
+                receiver_account=receiver.id,
+                amount=transfer.amount,
+                transaction_type="Transfer"
+            )
         )
-
-        db.add(new_transaction)
-
-        db.commit()
-
-        db.refresh(new_transaction)
 
         return {
             "message": "Transfer Successful",
-            "transaction_id": new_transaction.id
+            "transaction_id": transaction.id
         }
 
     @staticmethod
@@ -69,28 +72,29 @@ class TransactionService:
         transaction_type: str | None = None
     ):
 
-        accounts = db.query(Account).filter(
-            Account.user_id == user_id
-        ).all()
-
-        account_ids = [account.id for account in accounts]
-
-        query = db.query(Transaction).filter(
-            (Transaction.sender_account.in_(account_ids)) |
-            (Transaction.receiver_account.in_(account_ids))
-        )
-
-        if transaction_type:
-            query = query.filter(
-                Transaction.transaction_type == transaction_type
-            )
-
-        transactions = (
-            query
-            .order_by(Transaction.created_at.desc())
-            .offset((page - 1) * limit)
-            .limit(limit)
+        accounts = (
+            db.query(Account)
+            .filter(Account.user_id == user_id)
             .all()
         )
 
-        return transactions
+        account_ids = [a.id for a in accounts]
+
+        return TransactionRepository.get_transactions(
+            db,
+            account_ids,
+            page,
+            limit,
+            transaction_type
+        )
+
+    @staticmethod
+    def search_transaction(
+        db: Session,
+        transaction_id: int
+    ):
+
+        return TransactionRepository.get_by_id(
+            db,
+            transaction_id
+        )

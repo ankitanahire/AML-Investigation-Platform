@@ -1,5 +1,4 @@
 import random
-
 from sqlalchemy.orm import Session
 
 from app.models.accounts import Account
@@ -16,6 +15,9 @@ from app.exceptions.account_exceptions import (
     InsufficientBalanceException,
 )
 
+from app.repositories.account_repository import AccountRepository
+from app.repositories.transaction_repository import TransactionRepository
+
 
 class AccountService:
 
@@ -29,11 +31,13 @@ class AccountService:
         user_id: int,
         account: AccountCreate
     ):
+
         account_number = AccountService.generate_account_number()
 
-        while db.query(Account).filter(
-            Account.account_number == account_number
-        ).first():
+        while AccountRepository.get_by_account_number(
+            db,
+            account_number
+        ):
             account_number = AccountService.generate_account_number()
 
         new_account = Account(
@@ -43,20 +47,39 @@ class AccountService:
             user_id=user_id
         )
 
-        db.add(new_account)
-        db.commit()
-        db.refresh(new_account)
-
-        return new_account
+        return AccountRepository.create(
+            db,
+            new_account
+        )
 
     @staticmethod
     def get_accounts(
         db: Session,
         user_id: int
     ):
-        return db.query(Account).filter(
-            Account.user_id == user_id
-        ).all()
+
+        return AccountRepository.get_all_by_user(
+            db,
+            user_id
+        )
+
+    @staticmethod
+    def search_account(
+        db: Session,
+        user_id: int,
+        account_number: str
+    ):
+
+        account = AccountRepository.search_account(
+            db,
+            account_number,
+            user_id
+        )
+
+        if account is None:
+            raise AccountNotFoundException()
+
+        return account
 
     @staticmethod
     def deposit_money(
@@ -64,10 +87,12 @@ class AccountService:
         user_id: int,
         deposit: DepositRequest
     ):
-        account = db.query(Account).filter(
-            Account.account_number == deposit.account_number,
-            Account.user_id == user_id
-        ).first()
+
+        account = AccountRepository.get_by_account_number_and_user(
+            db,
+            deposit.account_number,
+            user_id
+        )
 
         if account is None:
             raise AccountNotFoundException()
@@ -81,9 +106,12 @@ class AccountService:
             transaction_type="Deposit"
         )
 
-        db.add(transaction)
-        db.commit()
-        db.refresh(account)
+        TransactionRepository.create(
+            db,
+            transaction
+        )
+
+        AccountRepository.refresh(db, account)
 
         return account
 
@@ -93,10 +121,12 @@ class AccountService:
         user_id: int,
         withdraw: WithdrawRequest
     ):
-        account = db.query(Account).filter(
-            Account.account_number == withdraw.account_number,
-            Account.user_id == user_id
-        ).first()
+
+        account = AccountRepository.get_by_account_number_and_user(
+            db,
+            withdraw.account_number,
+            user_id
+        )
 
         if account is None:
             raise AccountNotFoundException()
@@ -113,9 +143,12 @@ class AccountService:
             transaction_type="Withdraw"
         )
 
-        db.add(transaction)
-        db.commit()
-        db.refresh(account)
+        TransactionRepository.create(
+            db,
+            transaction
+        )
+
+        AccountRepository.refresh(db, account)
 
         return account
 
@@ -125,10 +158,12 @@ class AccountService:
         user_id: int,
         account_number: str
     ):
-        account = db.query(Account).filter(
-            Account.account_number == account_number,
-            Account.user_id == user_id
-        ).first()
+
+        account = AccountRepository.get_by_account_number_and_user(
+            db,
+            account_number,
+            user_id
+        )
 
         if account is None:
             raise AccountNotFoundException()

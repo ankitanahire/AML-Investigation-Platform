@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -50,3 +50,24 @@ def transaction_history(
         limit,
         transaction_type
     )
+
+
+@router.get("/{transaction_id}", response_model=TransactionResponse)
+def search_transaction(
+    transaction_id: int,
+    current_user: User = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+
+    transaction = TransactionService.search_transaction(
+        db,
+        transaction_id
+    )
+
+    if transaction is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Transaction not found"
+        )
+
+    return transaction

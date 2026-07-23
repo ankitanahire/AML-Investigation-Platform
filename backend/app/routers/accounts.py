@@ -29,6 +29,7 @@ def create_account(
     current_user: User = Depends(verify_token),
     db: Session = Depends(get_db)
 ):
+
     return AccountService.create_account(
         db,
         current_user.id,
@@ -48,6 +49,23 @@ def view_my_accounts(
     )
 
     return {"accounts": accounts}
+
+
+# -----------------------------
+# NEW - Search Account Number
+# -----------------------------
+@router.get("/search/{account_number}", response_model=AccountResponse)
+def search_account(
+    account_number: str,
+    current_user: User = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+
+    return AccountService.search_account(
+        db,
+        current_user.id,
+        account_number
+    )
 
 
 @router.post("/deposit", response_model=AccountResponse)
