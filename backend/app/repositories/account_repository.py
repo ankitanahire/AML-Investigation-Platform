@@ -10,10 +10,23 @@ class AccountRepository:
         db: Session,
         account: Account
     ):
+        """
+        Adds a new account to the current transaction.
+        Service layer will commit.
+        """
         db.add(account)
-        db.commit()
-        db.refresh(account)
         return account
+
+    @staticmethod
+    def get_by_id(
+        db: Session,
+        account_id: int
+    ):
+        return (
+            db.query(Account)
+            .filter(Account.id == account_id)
+            .first()
+        )
 
     @staticmethod
     def get_by_account_number(
@@ -53,6 +66,31 @@ class AccountRepository:
         )
 
     @staticmethod
+    def update(
+        db: Session,
+        account: Account
+    ):
+        """
+        Account object is already attached to session.
+        This method exists for readability.
+        """
+        return account
+
+    @staticmethod
+    def delete(
+        db: Session,
+        account: Account
+    ):
+        db.delete(account)
+
+    @staticmethod
+    def refresh(
+        db: Session,
+        account: Account
+    ):
+        db.refresh(account)
+
+    @staticmethod
     def search_account(
         db: Session,
         account_number: str,
@@ -66,10 +104,3 @@ class AccountRepository:
             )
             .first()
         )
-
-    @staticmethod
-    def refresh(
-        db: Session,
-        account: Account
-    ):
-        db.refresh(account)
