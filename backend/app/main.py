@@ -6,6 +6,7 @@ from app.database import Base, engine
 from app.models.user import User
 from app.models.accounts import Account
 from app.models.transaction import Transaction
+from app.models.aml_alert import AMLAlert
 
 # Import routers
 from app.routers.auth import router as auth_router
