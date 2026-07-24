@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models.accounts import Account
+from app.models.transaction import Transaction
 
 from app.schemas.transaction import TransferRequest
 
@@ -11,6 +12,7 @@ from app.exceptions.transaction_exceptions import (
 )
 
 from app.repositories.transaction_repository import TransactionRepository
+from app.services.aml_service import AMLService
 
 
 class TransactionService:
@@ -45,18 +47,27 @@ class TransactionService:
         sender.balance -= transfer.amount
         receiver.balance += transfer.amount
 
+        transaction = Transaction(
+            sender_account=sender.id,
+            receiver_account=receiver.id,
+            amount=transfer.amount,
+            transaction_type="Transfer"
+        )
+
         transaction = TransactionRepository.create(
             db,
-            __import__(
-                "app.models.transaction",
-                fromlist=["Transaction"]
-            ).Transaction(
-                sender_account=sender.id,
-                receiver_account=receiver.id,
-                amount=transfer.amount,
-                transaction_type="Transfer"
-            )
+            transaction
         )
+
+        db.flush()
+        AMLService.run_rules(
+            db=db,
+            account_id=sender.id,
+            transaction_id=transaction.id,
+            amount=transfer.amount
+        )
+        db.commit()
+        db.refresh(transaction)
 
         return {
             "message": "Transfer Successful",

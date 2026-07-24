@@ -12,6 +12,7 @@ from app.models.aml_alert import AMLAlert
 from app.routers.auth import router as auth_router
 from app.routers.accounts import router as account_router
 from app.routers.transaction import router as transaction_router
+from app.routers.aml import router as aml_router
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -25,6 +26,7 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(account_router)
 app.include_router(transaction_router)
+app.include_router(aml_router)
 
 
 @app.get("/")

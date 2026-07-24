@@ -1,4 +1,12 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, DateTime
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    Numeric,
+    DateTime,
+    Boolean
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -10,14 +18,41 @@ class Account(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    account_number = Column(String(20), unique=True, nullable=False, index=True)
+    account_number = Column(
+        String(20),
+        unique=True,
+        nullable=False,
+        index=True
+    )
 
-    account_type = Column(String(20), nullable=False)
+    account_type = Column(
+        String(20),
+        nullable=False
+    )
 
-    balance = Column(Numeric(12, 2), default=0)
+    balance = Column(
+        Numeric(12, 2),
+        default=0
+    )
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    is_frozen = Column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
+    )
 
-    owner = relationship("User", back_populates="accounts")
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+
+    owner = relationship(
+        "User",
+        back_populates="accounts"
+    )
