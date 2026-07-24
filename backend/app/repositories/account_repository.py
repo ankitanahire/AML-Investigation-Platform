@@ -70,10 +70,6 @@ class AccountRepository:
         db: Session,
         account: Account
     ):
-        """
-        Account object is already attached to session.
-        This method exists for readability.
-        """
         return account
 
     @staticmethod
@@ -104,3 +100,18 @@ class AccountRepository:
             )
             .first()
         )
+
+   # Freeze / Unfreeze 
+    @staticmethod
+    def freeze_account(
+        account: Account
+    ):
+        account.is_frozen = True
+        return account
+
+    @staticmethod
+    def unfreeze_account(
+        account: Account
+    ):
+        account.is_frozen = False
+        return account

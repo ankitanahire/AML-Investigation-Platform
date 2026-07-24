@@ -51,9 +51,9 @@ def view_my_accounts(
     return {"accounts": accounts}
 
 
-# -----------------------------
-# NEW - Search Account Number
-# -----------------------------
+# ---------------------------------------
+# Search Account
+# ---------------------------------------
 @router.get("/search/{account_number}", response_model=AccountResponse)
 def search_account(
     account_number: str,
@@ -68,6 +68,43 @@ def search_account(
     )
 
 
+# ---------------------------------------
+# Freeze Account
+# ---------------------------------------
+@router.patch("/freeze/{account_number}", response_model=AccountResponse)
+def freeze_account(
+    account_number: str,
+    current_user: User = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+
+    return AccountService.freeze_account(
+        db,
+        current_user.id,
+        account_number
+    )
+
+
+# ---------------------------------------
+# Unfreeze Account
+# ---------------------------------------
+@router.patch("/unfreeze/{account_number}", response_model=AccountResponse)
+def unfreeze_account(
+    account_number: str,
+    current_user: User = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+
+    return AccountService.unfreeze_account(
+        db,
+        current_user.id,
+        account_number
+    )
+
+
+# ---------------------------------------
+# Deposit
+# ---------------------------------------
 @router.post("/deposit", response_model=AccountResponse)
 def deposit_money(
     deposit: DepositRequest,
@@ -82,6 +119,9 @@ def deposit_money(
     )
 
 
+# ---------------------------------------
+# Withdraw
+# ---------------------------------------
 @router.post("/withdraw", response_model=AccountResponse)
 def withdraw_money(
     withdraw: WithdrawRequest,
@@ -96,6 +136,9 @@ def withdraw_money(
     )
 
 
+# ---------------------------------------
+# Check Balance
+# ---------------------------------------
 @router.get("/balance")
 def check_balance(
     account_number: str,

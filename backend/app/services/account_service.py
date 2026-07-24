@@ -1,4 +1,6 @@
 import random
+
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.accounts import Account
@@ -47,10 +49,15 @@ class AccountService:
             user_id=user_id
         )
 
-        return AccountRepository.create(
+        AccountRepository.create(
             db,
             new_account
         )
+
+        db.commit()
+        db.refresh(new_account)
+
+        return new_account
 
     @staticmethod
     def get_accounts(
@@ -81,6 +88,60 @@ class AccountService:
 
         return account
 
+    # ----------------------------------------------------
+    # Freeze Account
+    # ----------------------------------------------------
+
+    @staticmethod
+    def freeze_account(
+        db: Session,
+        user_id: int,
+        account_number: str
+    ):
+
+        account = AccountRepository.get_by_account_number_and_user(
+            db,
+            account_number,
+            user_id
+        )
+
+        if account is None:
+            raise AccountNotFoundException()
+
+        AccountRepository.freeze_account(account)
+
+        db.commit()
+        db.refresh(account)
+
+        return account
+
+    # ----------------------------------------------------
+    # Unfreeze Account
+    # ----------------------------------------------------
+
+    @staticmethod
+    def unfreeze_account(
+        db: Session,
+        user_id: int,
+        account_number: str
+    ):
+
+        account = AccountRepository.get_by_account_number_and_user(
+            db,
+            account_number,
+            user_id
+        )
+
+        if account is None:
+            raise AccountNotFoundException()
+
+        AccountRepository.unfreeze_account(account)
+
+        db.commit()
+        db.refresh(account)
+
+        return account
+
     @staticmethod
     def deposit_money(
         db: Session,
@@ -97,6 +158,12 @@ class AccountService:
         if account is None:
             raise AccountNotFoundException()
 
+        if account.is_frozen:
+            raise HTTPException(
+                status_code=403,
+                detail="Account is frozen"
+            )
+
         account.balance += deposit.amount
 
         transaction = Transaction(
@@ -111,7 +178,8 @@ class AccountService:
             transaction
         )
 
-        AccountRepository.refresh(db, account)
+        db.commit()
+        db.refresh(account)
 
         return account
 
@@ -131,6 +199,12 @@ class AccountService:
         if account is None:
             raise AccountNotFoundException()
 
+        if account.is_frozen:
+            raise HTTPException(
+                status_code=403,
+                detail="Account is frozen"
+            )
+
         if account.balance < withdraw.amount:
             raise InsufficientBalanceException()
 
@@ -148,7 +222,8 @@ class AccountService:
             transaction
         )
 
-        AccountRepository.refresh(db, account)
+        db.commit()
+        db.refresh(account)
 
         return account
 
@@ -170,5 +245,6 @@ class AccountService:
 
         return {
             "account_number": account.account_number,
-            "balance": account.balance
+            "balance": account.balance,
+            "is_frozen": account.is_frozen
         }

@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.accounts import Account
@@ -41,8 +42,32 @@ class TransactionService:
         if receiver is None:
             raise ReceiverAccountNotFoundException()
 
+        # -----------------------------------
+        # Account Freeze Checks
+        # -----------------------------------
+
+        if sender.is_frozen:
+            raise HTTPException(
+                status_code=403,
+                detail="Sender account is frozen"
+            )
+
+        if receiver.is_frozen:
+            raise HTTPException(
+                status_code=403,
+                detail="Receiver account is frozen"
+            )
+
+        # -----------------------------------
+        # Balance Check
+        # -----------------------------------
+
         if sender.balance < transfer.amount:
             raise InsufficientBalanceException()
+
+        # -----------------------------------
+        # Transfer
+        # -----------------------------------
 
         sender.balance -= transfer.amount
         receiver.balance += transfer.amount
@@ -60,14 +85,23 @@ class TransactionService:
         )
 
         db.flush()
+
+        # -----------------------------------
+        # AML Rules
+        # -----------------------------------
+
         AMLService.run_rules(
             db=db,
             account_id=sender.id,
             transaction_id=transaction.id,
             amount=transfer.amount
         )
+
         db.commit()
+
         db.refresh(transaction)
+        db.refresh(sender)
+        db.refresh(receiver)
 
         return {
             "message": "Transfer Successful",
